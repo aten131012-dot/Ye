@@ -1,0 +1,2517 @@
+--// NEXORA / Build A Boat | ส่วน 1/12 (แกนหลัก)
+local NX_OK, NX_ERR = pcall(function()
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local env = (getgenv and getgenv()) or _G
+if env.NX_UNLOAD then pcall(env.NX_UNLOAD) end
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local RED = Color3.fromRGB(255, 70, 85)
+local DARK = Color3.fromRGB(10, 10, 12)
+local PANEL = Color3.fromRGB(20, 18, 22)
+local WHITE = Color3.fromRGB(255, 255, 255)
+local ROW = Color3.fromRGB(32, 26, 30)
+local BTN = Color3.fromRGB(175, 22, 40)
+local BTN_HOVER = Color3.fromRGB(225, 45, 65)
+local TOPC = Color3.fromRGB(70, 12, 26)
+local GREEN = Color3.fromRGB(40, 170, 90)
+
+local NX = {
+    conns = {}, cleanups = {}, refreshers = {}, lang = "th", currentTab = 1,
+    pages = {}, labelRefs = {}, isOpen = false, CAT = "rbxassetid://119290932517877",
+}
+NX.TEXT = { th = {}, en = {} }
+NX.colors = {
+    RED = RED, DARK = DARK, PANEL = PANEL, WHITE = WHITE, ROW = ROW,
+    BTN = BTN, BTN_HOVER = BTN_HOVER, TOPC = TOPC, GREEN = GREEN,
+}
+NX.categories = {
+    { key = "home",     emoji = "🏠" },
+    { key = "farm",     emoji = "🌾" },
+    { key = "esp",      emoji = "👁️" },
+    { key = "quest",    emoji = "📜" },
+    { key = "settings", emoji = "⚙️" },
+}
+
+local old = playerGui:FindFirstChild("NEXORA_BAB")
+if old then old:Destroy() end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "NEXORA_BAB"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999
+gui.Parent = playerGui
+NX.gui = gui
+
+local function make(class, props, parent)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do obj[k] = v end
+    obj.Parent = parent
+    return obj
+end
+local function round(obj, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r)
+    c.Parent = obj
+end
+local function stroke(obj, color, th)
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = color
+    s.Thickness = th or 1
+    s.Parent = obj
+    return s
+end
+local function tween(obj, d, props, style)
+    local t = TweenService:Create(obj,
+        TweenInfo.new(d, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props)
+    t:Play()
+    return t
+end
+local function isPress(i)
+    return i.UserInputType == Enum.UserInputType.MouseButton1
+        or i.UserInputType == Enum.UserInputType.Touch
+end
+local function cuteButton(props, parent)
+    props.BackgroundColor3 = BTN
+    props.TextColor3 = WHITE
+    props.AutoButtonColor = false
+    props.BorderSizePixel = 0
+    props.Font = props.Font or Enum.Font.GothamBold
+    local b = make("TextButton", props, parent)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = BTN_HOVER end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = BTN end)
+    return b
+end
+NX.make, NX.round, NX.stroke, NX.tween = make, round, stroke, tween
+NX.isPress, NX.cuteButton = isPress, cuteButton
+
+function NX.addText(key, th, en)
+    NX.TEXT.th[key] = th
+    NX.TEXT.en[key] = en
+end
+NX.addText("home", "หน้าหลัก", "Home")
+NX.addText("farm", "ฟาร์ม", "Farm")
+NX.addText("esp", "ESP", "ESP")
+NX.addText("quest", "ภารกิจ", "Quests")
+NX.addText("settings", "ตั้งค่า", "Settings")
+NX.addText("language", "ภาษา", "Language")
+NX.addText("welcome", "NEXORA / Build A Boat ✦ พร้อมใช้งาน", "NEXORA / Build A Boat ✦ Ready")
+
+function NX.bind(signal, fn)
+    local c = signal:Connect(fn)
+    NX.conns[#NX.conns + 1] = c
+    return c
+end
+function NX.styleRow(row)
+    stroke(row, Color3.fromRGB(90, 20, 36), 1)
+    local bar = make("Frame", {
+        Position = UDim2.new(0, 0, 0, 8), Size = UDim2.new(0, 3, 1, -16),
+        BackgroundColor3 = RED, BorderSizePixel = 0,
+    }, row)
+    round(bar, 2)
+end
+
+function NX.unload()
+    NX.dead = true
+    for _, f in ipairs(NX.cleanups) do pcall(f) end
+    for _, c in ipairs(NX.conns) do pcall(function() c:Disconnect() end) end
+    pcall(function() gui:Destroy() end)
+    if env.NX_UNLOAD == NX.unload then env.NX_UNLOAD = nil end
+end
+env.NX_UNLOAD = NX.unload
+env.NX_CORE = NX
+
+print("NEXORA / Build A Boat (1/12) loaded")
+
+end)
+
+if not NX_OK then
+    warn("NEXORA P1 ERROR: " .. tostring(NX_ERR))
+end--// NEXORA / Build A Boat | ส่วน 2/12 (ปุ่ม/สวิตช์/เลือกรายการ)
+local NX_OK2, NX_ERR2 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX then error("ต้องรันส่วน 1/12 ก่อน") end
+
+local C = NX.colors
+local WHITE, ROW, BTN, GREEN = C.WHITE, C.ROW, C.BTN, C.GREEN
+local make, round, stroke, cuteButton = NX.make, NX.round, NX.stroke, NX.cuteButton
+local labelRefs, TEXT = NX.labelRefs, NX.TEXT
+
+local function rowLabel(row, key, width)
+    local label = make("TextLabel", {
+        Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(1, width, 1, 0), BackgroundTransparency = 1,
+        TextColor3 = WHITE, Font = Enum.Font.GothamBold, TextSize = 11, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left, Text = "",
+    }, row)
+    labelRefs[label] = key
+    return label
+end
+local function newRow(page, order)
+    local row = make("Frame", {
+        LayoutOrder = order, Size = UDim2.new(1, -6, 0, 38), BackgroundColor3 = ROW, BorderSizePixel = 0,
+    }, page)
+    round(row, 10)
+    NX.styleRow(row)
+    return row
+end
+
+function NX.toggle(page, order, key, default, cb)
+    local row = newRow(page, order)
+    rowLabel(row, key, -84)
+    local b = cuteButton({
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.fromOffset(60, 26), Text = "OFF", TextSize = 11,
+    }, row)
+    round(b, 8)
+    local state = false
+    local obj = {}
+    local function paint()
+        b.Text = state and "ON" or "OFF"
+        b.BackgroundColor3 = state and GREEN or BTN
+    end
+    b.MouseLeave:Connect(paint)
+    b.MouseEnter:Connect(function() if state then b.BackgroundColor3 = GREEN end end)
+    function obj.set(v, silent)
+        state = v and true or false
+        paint()
+        if not silent and cb then task.spawn(cb, state) end
+    end
+    function obj.get() return state end
+    b.Activated:Connect(function() obj.set(not state) end)
+    if default then obj.set(true) end
+    return obj
+end
+
+function NX.button(page, order, key, cb)
+    local row = newRow(page, order)
+    local b = cuteButton({
+        Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(1, -20, 0, 28), Text = "", TextSize = 11,
+    }, row)
+    round(b, 8)
+    labelRefs[b] = key
+    b.Activated:Connect(function() if cb then task.spawn(cb) end end)
+    return b
+end
+
+function NX.stepper(page, order, key, min, max, step, default, cb)
+    local row = newRow(page, order)
+    rowLabel(row, key, -140)
+    local value = default
+    local minus = cuteButton({
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -86, 0.5, 0),
+        Size = UDim2.fromOffset(26, 26), Text = "-", TextSize = 16,
+    }, row)
+    round(minus, 8)
+    local shown = make("TextLabel", {
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -38, 0.5, 0),
+        Size = UDim2.fromOffset(44, 26), BackgroundTransparency = 1, TextColor3 = WHITE,
+        Font = Enum.Font.GothamBold, TextSize = 12, Text = tostring(value),
+    }, row)
+    local plus = cuteButton({
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.fromOffset(26, 26), Text = "+", TextSize = 16,
+    }, row)
+    round(plus, 8)
+    local function setV(v)
+        value = math.clamp(v, min, max)
+        shown.Text = tostring(value)
+        if cb then cb(value) end
+    end
+    minus.Activated:Connect(function() setV(value - step) end)
+    plus.Activated:Connect(function() setV(value + step) end)
+    if cb then cb(value) end
+    return { set = setV, get = function() return value end }
+end
+
+function NX.status(page, order)
+    local label = make("TextLabel", {
+        LayoutOrder = order, Size = UDim2.new(1, -6, 0, 26), BackgroundTransparency = 1,
+        TextColor3 = WHITE, Font = Enum.Font.GothamBold, TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, Text = "",
+    }, page)
+    local th, en = "", ""
+    local obj = {}
+    local function apply() label.Text = (NX.lang == "th") and th or en end
+    function obj.set(a, b) th, en = a, b; apply() end
+    NX.refreshers[#NX.refreshers + 1] = apply
+    return obj
+end
+
+-- ===== กดแล้วมีรายการให้เลือก (dropdown) =====
+function NX.dropdown(page, order, labelKey, keys, default, cb)
+    local box = make("Frame", {
+        LayoutOrder = order, Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+    }, page)
+    make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, box)
+    local head = newRow(box, 1)
+    head.Size = UDim2.new(1, 0, 0, 38)
+    rowLabel(head, labelKey, -170)
+    local hb = cuteButton({
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.fromOffset(150, 26), Text = "", TextSize = 11,
+    }, head)
+    round(hb, 8)
+    local list = make("Frame", {
+        LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = ROW, BorderSizePixel = 0, Visible = false,
+    }, box)
+    round(list, 10)
+    stroke(list, Color3.fromRGB(90, 20, 36), 1)
+    make("UIPadding", {
+        PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5),
+        PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6),
+    }, list)
+    make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+
+    local cur = default
+    local btns = {}
+    local obj = {}
+    local function paint()
+        local t = TEXT[NX.lang]
+        hb.Text = (t[cur] or cur) .. (list.Visible and "  ↑" or "  ↓")
+        for k, b in pairs(btns) do
+            b.Text = (k == cur and "✓ " or "") .. (t[k] or k)
+        end
+    end
+    for i, k in ipairs(keys) do
+        local b = cuteButton({
+            LayoutOrder = i, Size = UDim2.new(1, 0, 0, 28), Text = "", TextSize = 11,
+        }, list)
+        round(b, 8)
+        btns[k] = b
+        b.Activated:Connect(function()
+            cur = k
+            list.Visible = false
+            paint()
+            if cb then task.spawn(cb, k) end
+        end)
+    end
+    hb.Activated:Connect(function()
+        list.Visible = not list.Visible
+        paint()
+    end)
+    NX.refreshers[#NX.refreshers + 1] = paint
+    function obj.get() return cur end
+    paint()
+    if cb then task.spawn(cb, cur) end
+    return obj
+end
+
+print("NEXORA / Build A Boat (2/12) loaded")
+
+end)
+
+if not NX_OK2 then
+    warn("NEXORA P2 ERROR: " .. tostring(NX_ERR2))
+end--// NEXORA / Build A Boat | ส่วน 3/12 (หน้าต่างหลัก)
+local NX_OK3, NX_ERR3 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.dropdown then error("ต้องรันส่วน 1-2 ก่อน") end
+
+local C = NX.colors
+local RED, PANEL, WHITE, BTN, TOPC = C.RED, C.PANEL, C.WHITE, C.BTN, C.TOPC
+local make, round, stroke, cuteButton = NX.make, NX.round, NX.stroke, NX.cuteButton
+local CAT = NX.CAT
+
+local main = make("Frame", {
+    Name = "Main", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+    Size = UDim2.fromScale(0.78, 0.76), BackgroundColor3 = Color3.fromRGB(14, 10, 16),
+    BorderSizePixel = 0, Visible = false,
+}, NX.gui)
+round(main, 18)
+stroke(main, RED, 2)
+NX.mainScale = make("UIScale", { Scale = 1 }, main)
+local lim = Instance.new("UISizeConstraint")
+lim.MinSize = Vector2.new(300, 280)
+lim.MaxSize = Vector2.new(560, 430)
+lim.Parent = main
+NX.main = main
+
+local top = make("Frame", {
+    Name = "TopBar", Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = TOPC, BorderSizePixel = 0,
+}, main)
+round(top, 18)
+make("Frame", {
+    Position = UDim2.new(0, 0, 1, -12), Size = UDim2.new(1, 0, 0, 12),
+    BackgroundColor3 = TOPC, BorderSizePixel = 0,
+}, top)
+make("ImageLabel", {
+    Position = UDim2.new(0, 10, 0, 7), Size = UDim2.fromOffset(34, 34),
+    BackgroundTransparency = 1, Image = CAT, ScaleType = Enum.ScaleType.Fit,
+}, top)
+local title = make("TextLabel", {
+    Position = UDim2.new(0, 51, 0, 0), Size = UDim2.new(1, -150, 1, 0), BackgroundTransparency = 1,
+    Text = "NEXORA / Build A Boat", TextColor3 = WHITE, Font = Enum.Font.GothamBold, TextSize = 15,
+    TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+}, top)
+make("UITextSizeConstraint", { MaxTextSize = 15, MinTextSize = 8 }, title)
+NX.top = top
+NX.closeB = cuteButton({
+    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
+    Size = UDim2.fromOffset(34, 34), Text = "×", TextSize = 22,
+}, top)
+round(NX.closeB, 9)
+NX.minB = cuteButton({
+    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -48, 0.5, 0),
+    Size = UDim2.fromOffset(34, 34), Text = "—", TextSize = 18,
+}, top)
+round(NX.minB, 9)
+
+-- แถบข้าง
+local sidebar = make("Frame", {
+    Position = UDim2.new(0, 9, 0, 56), Size = UDim2.new(0, 124, 1, -65),
+    BackgroundColor3 = PANEL, BorderSizePixel = 0,
+}, main)
+round(sidebar, 13)
+stroke(sidebar, Color3.fromRGB(80, 18, 32), 1)
+
+local tabScroll = make("ScrollingFrame", {
+    Size = UDim2.new(1, 0, 1, -64), BackgroundTransparency = 1, BorderSizePixel = 0,
+    ScrollBarThickness = 3, ScrollBarImageColor3 = BTN, CanvasSize = UDim2.new(0, 0, 0, 0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+}, sidebar)
+make("UIPadding", {
+    PaddingTop = UDim.new(0, 7), PaddingBottom = UDim.new(0, 7),
+    PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6),
+}, tabScroll)
+make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, tabScroll)
+NX.tabScroll = tabScroll
+
+NX.langLabel = make("TextLabel", {
+    Position = UDim2.new(0, 6, 1, -60), Size = UDim2.new(1, -12, 0, 16), BackgroundTransparency = 1,
+    TextColor3 = WHITE, Font = Enum.Font.GothamBold, TextSize = 11, Text = "",
+}, sidebar)
+NX.thButton = cuteButton({
+    Position = UDim2.new(0, 6, 1, -40), Size = UDim2.new(0.5, -9, 0, 32), Text = "🇹🇭 ไทย", TextSize = 11,
+}, sidebar)
+round(NX.thButton, 9)
+NX.thStroke = stroke(NX.thButton, WHITE, 2)
+NX.enButton = cuteButton({
+    Position = UDim2.new(0.5, 3, 1, -40), Size = UDim2.new(0.5, -9, 0, 32), Text = "🇬🇧 English", TextSize = 11,
+}, sidebar)
+round(NX.enButton, 9)
+NX.enStroke = stroke(NX.enButton, WHITE, 2)
+
+-- พื้นที่เนื้อหา
+local content = make("Frame", {
+    Position = UDim2.new(0, 141, 0, 56), Size = UDim2.new(1, -150, 1, -65),
+    BackgroundColor3 = PANEL, BorderSizePixel = 0,
+}, main)
+round(content, 13)
+stroke(content, Color3.fromRGB(80, 18, 32), 1)
+NX.pageTitle = make("TextLabel", {
+    Position = UDim2.new(0, 12, 0, 8), Size = UDim2.new(1, -24, 0, 28), BackgroundTransparency = 1,
+    TextColor3 = RED, Font = Enum.Font.GothamBold, TextSize = 16,
+    TextXAlignment = Enum.TextXAlignment.Left, Text = "",
+}, content)
+
+for _, cat in ipairs(NX.categories) do
+    local page = make("ScrollingFrame", {
+        Name = cat.key, Position = UDim2.new(0, 8, 0, 40), Size = UDim2.new(1, -16, 1, -48),
+        BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+        ScrollBarImageColor3 = BTN, CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y, Visible = false,
+    }, content)
+    make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, page)
+    NX.pages[cat.key] = page
+end
+
+print("NEXORA / Build A Boat (3/12) loaded")
+
+end)
+
+if not NX_OK3 then
+    warn("NEXORA P3 ERROR: " .. tostring(NX_ERR3))
+end--// NEXORA / Build A Boat | ส่วน 4/12 (เปิด/ปิด + ลาก + โลโก้แมว)
+local NX_OK4, NX_ERR4 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.main then error("ต้องรันส่วน 1-3 ก่อน") end
+
+local UserInputService = game:GetService("UserInputService")
+local C = NX.colors
+local RED, DARK = C.RED, C.DARK
+local make, round, stroke, tween, isPress = NX.make, NX.round, NX.stroke, NX.tween, NX.isPress
+local main, mainScale = NX.main, NX.mainScale
+
+local animId = 0
+function NX.setOpen(v)
+    NX.isOpen = v
+    animId += 1
+    local my = animId
+    if v then
+        mainScale.Scale = 0.6
+        main.Visible = true
+        tween(mainScale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+    else
+        local tw = tween(mainScale, 0.16, { Scale = 0.6 })
+        tw.Completed:Connect(function()
+            if animId == my then main.Visible = false end
+        end)
+    end
+end
+NX.closeB.Activated:Connect(function() NX.setOpen(false) end)
+NX.minB.Activated:Connect(function() NX.setOpen(false) end)
+
+local function makeDraggable(handle, target, flag)
+    local dragging, startIn, startPos = false, nil, nil
+    handle.InputBegan:Connect(function(input)
+        if isPress(input) then
+            dragging, startIn, startPos = true, input.Position, target.Position
+            if flag then flag.moved = false end
+        end
+    end)
+    NX.bind(UserInputService.InputChanged, function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch) then
+            local d = input.Position - startIn
+            if flag and (math.abs(d.X) > 5 or math.abs(d.Y) > 5) then flag.moved = true end
+            if not flag or flag.moved then
+                target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end
+    end)
+    NX.bind(UserInputService.InputEnded, function(input)
+        if dragging and isPress(input) then
+            dragging = false
+            if flag then task.delay(0.05, function() flag.moved = false end) end
+        end
+    end)
+end
+
+local logo = make("ImageButton", {
+    Name = "CatToggle", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -90),
+    Size = UDim2.fromOffset(58, 58), BackgroundColor3 = DARK, Image = NX.CAT,
+    ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 100,
+}, NX.gui)
+round(logo, 17)
+stroke(logo, RED, 2)
+local logoFlag = { moved = false }
+makeDraggable(NX.top, main)
+makeDraggable(logo, logo, logoFlag)
+logo.Activated:Connect(function()
+    if logoFlag.moved then return end
+    NX.setOpen(not NX.isOpen)
+end)
+
+NX.setOpen(true)
+print("NEXORA / Build A Boat (4/12) loaded")
+
+end)
+
+if not NX_OK4 then
+    warn("NEXORA P4 ERROR: " .. tostring(NX_ERR4))
+end--// NEXORA / Build A Boat | ส่วน 5/12 (หน้าหลัก)
+local NX_OK5, NX_ERR5 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.setOpen then error("ต้องรันส่วน 1-4 ก่อน") end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local C = NX.colors
+local RED, DARK, WHITE, ROW, BTN = C.RED, C.DARK, C.WHITE, C.ROW, C.BTN
+local make, round, stroke, cuteButton = NX.make, NX.round, NX.stroke, NX.cuteButton
+local TEXT, labelRefs, addText = NX.TEXT, NX.labelRefs, NX.addText
+local DISCORD = "https://discord.gg/Qdaj957G4"
+
+addText("name", "👤 ชื่อตัวละคร", "👤 Character")
+addText("profile", "🖼️ โปรไฟล์", "🖼️ Profile")
+addText("health", "❤️ เลือด", "❤️ Health")
+addText("fps", "⚡ FPS", "⚡ FPS")
+addText("discord", "💬 ดิสคอร์ด", "💬 Discord")
+addText("copy", "คัดลอกลิงก์", "Copy link")
+addText("copied", "คัดลอกแล้ว ✓", "Copied ✓")
+addText("copyfail", "คัดลอกไม่ได้", "Copy failed")
+
+function NX.getChar()
+    local c = player.Character
+    local hrp = c and c:FindFirstChild("HumanoidRootPart")
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+    return hrp, hum
+end
+local getChar = NX.getChar
+
+local home = NX.pages.home
+local function makeRow(order, labelKey)
+    local row = make("Frame", {
+        LayoutOrder = order, Size = UDim2.new(1, -6, 0, 34), BackgroundColor3 = ROW, BorderSizePixel = 0,
+    }, home)
+    round(row, 10)
+    NX.styleRow(row)
+    local label = make("TextLabel", {
+        Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.4, -10, 1, 0), BackgroundTransparency = 1,
+        TextColor3 = RED, Font = Enum.Font.GothamBold, TextSize = 11, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left, Text = "",
+    }, row)
+    labelRefs[label] = labelKey
+    local value = make("TextLabel", {
+        Position = UDim2.new(0.4, 0, 0, 0), Size = UDim2.new(0.6, -46, 1, 0), BackgroundTransparency = 1,
+        TextColor3 = WHITE, Font = Enum.Font.Gotham, TextSize = 11, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Right, Text = "-",
+    }, row)
+    return row, value
+end
+
+NX.welcome = make("TextLabel", {
+    LayoutOrder = 0, Size = UDim2.new(1, -6, 0, 22), BackgroundTransparency = 1, TextColor3 = WHITE,
+    Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Text = "",
+}, home)
+
+local _, nameValue = makeRow(1, "name")
+nameValue.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+local profileRow = makeRow(2, "profile")
+local avatar = make("ImageLabel", {
+    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
+    Size = UDim2.fromOffset(28, 28), BackgroundColor3 = DARK,
+    Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150",
+}, profileRow)
+round(avatar, 14)
+stroke(avatar, BTN, 2)
+local _, healthValue = makeRow(3, "health")
+local _, fpsValue = makeRow(4, "fps")
+
+local dRow = make("Frame", {
+    LayoutOrder = 5, Size = UDim2.new(1, -6, 0, 78), BackgroundColor3 = ROW, BorderSizePixel = 0,
+}, home)
+round(dRow, 10)
+NX.styleRow(dRow)
+local dLabel = make("TextLabel", {
+    Position = UDim2.new(0, 12, 0, 4), Size = UDim2.new(1, -20, 0, 20), BackgroundTransparency = 1,
+    TextColor3 = RED, Font = Enum.Font.GothamBold, TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left, Text = "",
+}, dRow)
+labelRefs[dLabel] = "discord"
+local dBox = make("TextBox", {
+    Position = UDim2.new(0, 12, 0, 26), Size = UDim2.new(1, -22, 0, 20), BackgroundColor3 = DARK,
+    BorderSizePixel = 0, Text = DISCORD, TextColor3 = WHITE, Font = Enum.Font.Gotham,
+    TextSize = 11, ClearTextOnFocus = false, TextEditable = false,
+}, dRow)
+round(dBox, 6)
+local copyB = cuteButton({
+    Position = UDim2.new(0, 12, 0, 50), Size = UDim2.new(1, -22, 0, 22), Text = "", TextSize = 11,
+}, dRow)
+round(copyB, 8)
+labelRefs[copyB] = "copy"
+copyB.Activated:Connect(function()
+    local clip = setclipboard or toclipboard
+    local ok = clip and pcall(clip, DISCORD)
+    copyB.Text = ok and TEXT[NX.lang].copied or TEXT[NX.lang].copyfail
+    task.wait(1.6)
+    copyB.Text = TEXT[NX.lang].copy
+end)
+
+local frames, lastTick = 0, os.clock()
+NX.bind(RunService.RenderStepped, function()
+    frames += 1
+    local now = os.clock()
+    if now - lastTick >= 0.5 then
+        fpsValue.Text = tostring(math.floor(frames / (now - lastTick) + 0.5))
+        frames, lastTick = 0, now
+    end
+end)
+task.spawn(function()
+    while not NX.dead and NX.gui.Parent do
+        local _, hum = getChar()
+        if hum then
+            if hum.MaxHealth > 1e6 then
+                healthValue.Text = "∞"
+            else
+                healthValue.Text = math.floor(hum.Health) .. " / " .. math.floor(hum.MaxHealth)
+            end
+        else
+            healthValue.Text = "-"
+        end
+        task.wait(0.3)
+    end
+end)
+
+print("NEXORA / Build A Boat (5/12) loaded")
+
+end)
+
+if not NX_OK5 then
+    warn("NEXORA P5 ERROR: " .. tostring(NX_ERR5))
+end--// NEXORA / Build A Boat | ส่วน 6/12 (ฟาร์ม + อมตะ)
+local NX_OK6, NX_ERR6 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.getChar then error("ต้องรันส่วน 1-5 ก่อน") end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local getChar = NX.getChar
+local addText = NX.addText
+
+addText("god", "🛡️ อมตะ (เลือดไม่ลด/โดนน้ำไม่ตาย)", "🛡️ God mode (no damage)")
+addText("autochest", "🏁 ออโต้ผ่านด่าน + เก็บกล่องสมบัติ", "🏁 Auto stages + Treasure chest")
+addText("stagesonly", "☁️ ลอยผ่านด่านอย่างเดียว (ไม่เอากล่อง)", "☁️ Float stages only (no chest)")
+addText("speed", "⚡ ความเร็วลอย", "⚡ Float speed")
+
+function NX.normalStages()
+    local bs = workspace:FindFirstChild("BoatStages")
+    return bs and bs:FindFirstChild("NormalStages")
+end
+
+local farmSpeed = 120
+function NX.flyTo(target, alive)
+    while alive() and not NX.dead do
+        local dt = RunService.Heartbeat:Wait()
+        local hrp, hum = getChar()
+        if not hrp or not hum or hum.Health <= 0 then return false end
+        local d = target - hrp.Position
+        local dist = d.Magnitude
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        if dist < 3 then
+            hrp.CFrame = CFrame.new(target) * (hrp.CFrame - hrp.CFrame.Position)
+            return true
+        end
+        local stepLen = math.min(dist, farmSpeed * dt)
+        hrp.CFrame = CFrame.new(hrp.Position + d.Unit * stepLen) * (hrp.CFrame - hrp.CFrame.Position)
+    end
+    return false
+end
+
+local farmPage = NX.pages.farm
+local runId = 0
+local farmActive = false
+local chestT, stageT, godT
+local statusRow = NX.status(farmPage, 1)
+statusRow.set("สถานะ: ปิดอยู่", "Status: Off")
+
+local function stagePart(i)
+    local ns = NX.normalStages()
+    local st = ns and ns:FindFirstChild("CaveStage" .. i)
+    return st and st:FindFirstChild("DarknessPart")
+end
+local function chestPart()
+    local ns = NX.normalStages()
+    local e = ns and ns:FindFirstChild("TheEnd")
+    local g = e and e:FindFirstChild("GoldenChest")
+    return g and g:FindFirstChild("Trigger")
+end
+
+-- อมตะ
+local godOn = true
+local function applyGod()
+    local c = player.Character
+    local _, hum = getChar()
+    if not hum then return end
+    pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, not godOn) end)
+    if godOn then
+        hum.MaxHealth = math.huge
+        hum.Health = hum.MaxHealth
+        if c and not c:FindFirstChild("NX_FF") then
+            local ff = Instance.new("ForceField")
+            ff.Name = "NX_FF"
+            ff.Visible = false
+            ff.Parent = c
+        end
+    else
+        local ff = c and c:FindFirstChild("NX_FF")
+        if ff then ff:Destroy() end
+        hum.MaxHealth = 100
+        hum.Health = 100
+    end
+end
+NX.bind(RunService.Heartbeat, function()
+    if not godOn then return end
+    local _, hum = getChar()
+    if hum and hum.Health < hum.MaxHealth and hum.Health > 0 then
+        hum.Health = hum.MaxHealth
+    end
+end)
+NX.bind(player.CharacterAdded, function()
+    task.wait(0.6)
+    if godOn and not NX.dead then applyGod() end
+end)
+NX.cleanups[#NX.cleanups + 1] = function() godOn = false; applyGod() end
+
+-- ทะลุของตอนลอย
+NX.bind(RunService.Stepped, function()
+    if not (farmActive or NX.qActive) then return end
+    local c = player.Character
+    if not c then return end
+    for _, p in ipairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then p.CanCollide = false end
+    end
+end)
+
+local function waitAlive(my)
+    local hrp, hum
+    repeat
+        task.wait(0.4)
+        hrp, hum = getChar()
+    until runId ~= my or NX.dead or (hrp and hum and hum.Health > 0)
+    task.wait(1.2)
+end
+
+local function stopFarm()
+    runId += 1
+    farmActive = false
+    if chestT then chestT.set(false, true) end
+    if stageT then stageT.set(false, true) end
+    statusRow.set("สถานะ: ปิดอยู่", "Status: Off")
+end
+NX.stopFarm = stopFarm
+
+local function farmLoop(mode, my)
+    local function alive() return runId == my end
+    while runId == my and not NX.dead do
+        local ok = true
+        for i = 1, 10 do
+            if runId ~= my then return end
+            local p = stagePart(i)
+            if not p then
+                stopFarm()
+                statusRow.set("⚠️ ไม่พบด่าน (ต้องอยู่ในแมพ Build A Boat)", "⚠️ Stage not found (join Build A Boat)")
+                return
+            end
+            statusRow.set("กำลังลอย: ด่าน " .. i .. "/10", "Floating: stage " .. i .. "/10")
+            if not NX.flyTo(p.Position, alive) then ok = false break end
+            task.wait(0.15)
+        end
+        if runId ~= my then return end
+        if ok then
+            if mode == "chest" then
+                local chest = chestPart()
+                if chest then
+                    statusRow.set("กำลังไปกล่องสมบัติ...", "Going to treasure chest...")
+                    if NX.flyTo(chest.Position, alive) then
+                        statusRow.set("เก็บกล่องแล้ว รอรีเซ็ต...", "Chest reached, waiting respawn...")
+                        task.wait(3)
+                    end
+                end
+                local c0 = player.Character
+                local t = os.clock()
+                while runId == my and player.Character == c0 and os.clock() - t < 45 do
+                    local _, hum = getChar()
+                    if hum and hum.Health <= 0 then break end
+                    task.wait(0.4)
+                end
+                waitAlive(my)
+            else
+                stopFarm()
+                statusRow.set("✓ ผ่านครบ 10 ด่านแล้ว", "✓ Finished all 10 stages")
+                return
+            end
+        else
+            waitAlive(my)
+        end
+    end
+end
+
+local function startFarm(mode)
+    if NX.stopQuests then NX.stopQuests() end
+    runId += 1
+    local my = runId
+    farmActive = true
+    task.spawn(farmLoop, mode, my)
+end
+NX.cleanups[#NX.cleanups + 1] = function() runId += 1; farmActive = false end
+
+godT = NX.toggle(farmPage, 2, "god", true, function(on)
+    godOn = on
+    applyGod()
+end)
+chestT = NX.toggle(farmPage, 3, "autochest", false, function(on)
+    if on then stageT.set(false, true); startFarm("chest") else stopFarm() end
+end)
+stageT = NX.toggle(farmPage, 4, "stagesonly", false, function(on)
+    if on then chestT.set(false, true); startFarm("stages") else stopFarm() end
+end)
+NX.stepper(farmPage, 5, "speed", 50, 500, 25, 120, function(v) farmSpeed = v end)
+
+print("NEXORA / Build A Boat (6/12) loaded")
+
+end)
+
+if not NX_OK6 then
+    warn("NEXORA P6 ERROR: " .. tostring(NX_ERR6))
+end--// NEXORA / Build A Boat | ส่วน 7/12 (ESP + ตั้งค่า)
+local NX_OK7, NX_ERR7 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.stopFarm then error("ต้องรันส่วน 1-6 ก่อน") end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
+local VirtualUser = game:GetService("VirtualUser")
+
+local player = Players.LocalPlayer
+local WHITE = NX.colors.WHITE
+local make, addText = NX.make, NX.addText
+
+addText("esp_line", "📏 เส้นลากไปหาผู้เล่น", "📏 Tracer lines")
+addText("esp_name", "🏷️ ดูชื่อผู้เล่น", "🏷️ Player names")
+addText("esp_box", "⬜ กรอบสี่เหลี่ยม (สีทีม)", "⬜ Box (team color)")
+addText("afk", "💤 กันหลุด (Anti-AFK)", "💤 Anti-AFK")
+addText("fpsboost", "🚀 ลดแลค (ลดกราฟิก)", "🚀 FPS boost (low graphics)")
+addText("keybind", "⌨️ ปุ่มลัด RightShift เปิด/ปิดเมนู", "⌨️ RightShift toggles menu")
+addText("resetchar", "💀 รีเซ็ตตัวละคร", "💀 Reset character")
+addText("rejoin", "🔄 เข้าเซิร์ฟใหม่", "🔄 Rejoin server")
+addText("unload", "❌ ปิดสคริปต์", "❌ Unload script")
+
+-- ===== ESP =====
+local espPage = NX.pages.esp
+local nameOn, boxOn, lineOn = false, false, false
+NX.toggle(espPage, 1, "esp_line", false, function(v) lineOn = v end)
+NX.toggle(espPage, 2, "esp_name", false, function(v) nameOn = v end)
+NX.toggle(espPage, 3, "esp_box", false, function(v) boxOn = v end)
+
+local lines = make("Frame", {
+    Name = "ESPLines", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+    BorderSizePixel = 0, ZIndex = -5,
+}, NX.gui)
+
+local entries = {}
+local function removeEntry(p)
+    local e = entries[p]
+    if e then
+        for _, o in pairs({ e.bb, e.box, e.line }) do pcall(function() o:Destroy() end) end
+        entries[p] = nil
+    end
+end
+local function getEntry(p)
+    local e = entries[p]
+    if e then return e end
+    e = {}
+    e.bb = make("BillboardGui", {
+        AlwaysOnTop = true, Size = UDim2.fromOffset(180, 30), StudsOffset = Vector3.new(0, 3.6, 0),
+        ResetOnSpawn = false, Enabled = false,
+    }, NX.gui)
+    e.label = make("TextLabel", {
+        Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = Enum.Font.GothamBold,
+        TextSize = 13, TextStrokeTransparency = 0, TextColor3 = WHITE, Text = "",
+    }, e.bb)
+    e.box = make("SelectionBox", { LineThickness = 0.04, SurfaceTransparency = 1 }, NX.gui)
+    e.line = make("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5), BorderSizePixel = 0, Visible = false,
+    }, lines)
+    entries[p] = e
+    return e
+end
+
+NX.bind(Players.PlayerRemoving, removeEntry)
+NX.bind(RunService.RenderStepped, function()
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    local any = nameOn or boxOn or lineOn
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            local char = p.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if any and hrp and hum and hum.Health > 0 then
+                local e = getEntry(p)
+                local col = p.TeamColor.Color
+                local dist = (cam.CFrame.Position - hrp.Position).Magnitude
+                e.bb.Adornee = nameOn and hrp or nil
+                e.bb.Enabled = nameOn
+                if nameOn then
+                    e.label.Text = p.DisplayName .. " [" .. math.floor(dist) .. "m]"
+                    e.label.TextColor3 = col
+                end
+                e.box.Adornee = boxOn and char or nil
+                e.box.Color3 = col
+                if lineOn then
+                    local v = cam:WorldToViewportPoint(hrp.Position)
+                    if v.Z > 0 then
+                        local from = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+                        local to = Vector2.new(v.X, v.Y)
+                        local d = to - from
+                        e.line.Visible = true
+                        e.line.BackgroundColor3 = col
+                        e.line.Size = UDim2.fromOffset(d.Magnitude, 1.5)
+                        e.line.Position = UDim2.fromOffset((from.X + to.X) / 2, (from.Y + to.Y) / 2)
+                        e.line.Rotation = math.deg(math.atan2(d.Y, d.X))
+                    else
+                        e.line.Visible = false
+                    end
+                else
+                    e.line.Visible = false
+                end
+            else
+                removeEntry(p)
+            end
+        end
+    end
+end)
+
+-- ===== ตั้งค่า =====
+local setPage = NX.pages.settings
+
+local afkOn = true
+NX.bind(player.Idled, function()
+    if not afkOn then return end
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+end)
+NX.toggle(setPage, 1, "afk", true, function(v) afkOn = v end)
+
+local oldQ, oldShadow
+local function restoreGfx()
+    if oldShadow ~= nil then Lighting.GlobalShadows = oldShadow end
+    if oldQ then pcall(function() settings().Rendering.QualityLevel = oldQ end) end
+    oldQ, oldShadow = nil, nil
+end
+NX.toggle(setPage, 2, "fpsboost", false, function(v)
+    if v then
+        oldShadow = Lighting.GlobalShadows
+        pcall(function()
+            oldQ = settings().Rendering.QualityLevel
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        Lighting.GlobalShadows = false
+    else
+        restoreGfx()
+    end
+end)
+NX.cleanups[#NX.cleanups + 1] = restoreGfx
+
+local keyOn = true
+NX.toggle(setPage, 3, "keybind", true, function(v) keyOn = v end)
+NX.bind(UserInputService.InputBegan, function(input, processed)
+    if processed or not keyOn then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        NX.setOpen(not NX.isOpen)
+    end
+end)
+
+NX.button(setPage, 4, "resetchar", function()
+    local c = player.Character
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+    if hum then hum.Health = 0 end
+end)
+NX.button(setPage, 5, "rejoin", function()
+    pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
+end)
+NX.button(setPage, 6, "unload", function() NX.unload() end)
+
+print("NEXORA / Build A Boat (7/12) loaded")
+
+end)
+
+if not NX_OK7 then
+    warn("NEXORA P7 ERROR: " .. tostring(NX_ERR7))
+end--// NEXORA / Build A Boat | ส่วน 8/12 (ระบบเควส + ตัวช่วยกดปุ่มเกม)
+local NX_OK8, NX_ERR8 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.stopFarm then error("ต้องรันส่วน 1-7 ก่อน") end
+
+local Players = game:GetService("Players")
+local GuiService = game:GetService("GuiService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local VIM
+pcall(function() VIM = game:GetService("VirtualInputManager") end)
+
+-- ชื่อเควสในเมนูเกม (พิมพ์เล็ก ไม่มีช่องว่าง)
+NX.questNames = { "cloud", "target", "soccer", "ramp", "findme", "thebox", "thinice", "dragon" }
+
+local questPage = NX.pages.quest
+local qStatus = NX.status(questPage, 1)
+NX.qStatus = qStatus
+qStatus.set("สถานะ: ปิดอยู่", "Status: Off")
+
+local qRun = 0
+local function unanchor()
+    local hrp = NX.getChar()
+    if hrp then pcall(function() hrp.Anchored = false end) end
+end
+local function refresh()
+    if NX.qRefresh then pcall(NX.qRefresh) end
+end
+
+function NX.stopQuests()
+    qRun += 1
+    NX.qActive = false
+    unanchor()
+    qStatus.set("สถานะ: ปิดอยู่", "Status: Off")
+    refresh()
+end
+NX.cleanups[#NX.cleanups + 1] = function() qRun += 1; NX.qActive = false; unanchor() end
+
+function NX.startQuestFn(fn)
+    if NX.stopFarm then NX.stopFarm() end
+    qRun += 1
+    local my = qRun
+    NX.qActive = true
+    refresh()
+    task.spawn(function()
+        local ok, err = pcall(fn, function() return qRun == my and not NX.dead end)
+        if not ok then qStatus.set("⚠️ " .. tostring(err), "⚠️ " .. tostring(err)) end
+        if qRun == my then
+            NX.qActive = false
+            unanchor()
+            refresh()
+        end
+    end)
+end
+
+-- วนดูทั้งแมพ (ข้ามกล้อง/Terrain/ตัวละคร)
+function NX.iterWorld(fn)
+    local n = 0
+    for _, top in ipairs(workspace:GetChildren()) do
+        local skip = top == workspace.CurrentCamera or top:IsA("Terrain")
+            or Players:GetPlayerFromCharacter(top) ~= nil
+        if not skip then
+            if fn(top) then return end
+            for _, d in ipairs(top:GetDescendants()) do
+                n += 1
+                if n % 3000 == 0 then task.wait() end
+                if fn(d) then return end
+            end
+        end
+    end
+end
+
+function NX.touch(part)
+    local hrp = NX.getChar()
+    if not (hrp and part and firetouchinterest) then return end
+    pcall(function()
+        firetouchinterest(hrp, part, 0)
+        task.wait(0.05)
+        firetouchinterest(hrp, part, 1)
+    end)
+end
+
+-- ===== ตัวช่วยกด GUI ของเกม =====
+local function norm(s)
+    s = tostring(s or "")
+    s = s:gsub("<[^>]->", "")
+    s = s:gsub("%s+", "")
+    return string.lower(s)
+end
+
+local function isShown(g)
+    local cur = g
+    while cur and cur ~= playerGui do
+        if cur:IsA("GuiObject") and not cur.Visible then return false end
+        if cur:IsA("ScreenGui") and not cur.Enabled then return false end
+        if cur:IsA("CanvasGroup") and cur.GroupTransparency >= 0.99 then return false end
+        cur = cur.Parent
+    end
+    return g.AbsoluteSize.X > 0 and g.AbsoluteSize.Y > 0
+end
+
+local function center(o) return o.AbsolutePosition + o.AbsoluteSize / 2 end
+local function contains(o, p)
+    local a, s = o.AbsolutePosition, o.AbsoluteSize
+    return p.X >= a.X and p.X <= a.X + s.X and p.Y >= a.Y and p.Y <= a.Y + s.Y
+end
+
+local function findLabel(word, exactOnly)
+    local best
+    for _, d in ipairs(playerGui:GetDescendants()) do
+        if (d:IsA("TextLabel") or d:IsA("TextButton")) and not d:IsDescendantOf(NX.gui) then
+            local t = norm(d.Text)
+            if t ~= "" then
+                if t == word then
+                    if isShown(d) then return d end
+                elseif (not exactOnly) and (not best) and #t <= #word + 8
+                    and string.find(t, word, 1, true) and isShown(d) then
+                    best = d
+                end
+            end
+        end
+    end
+    return best
+end
+
+local function buttonAt(label)
+    if label:IsA("GuiButton") then return label end
+    local root = label:FindFirstAncestorWhichIsA("LayerCollector") or playerGui
+    local cam = workspace.CurrentCamera
+    local maxArea = cam and (cam.ViewportSize.X * cam.ViewportSize.Y * 0.5) or math.huge
+    local p = center(label)
+    local best, bestArea, near, nearDist
+    for _, d in ipairs(root:GetDescendants()) do
+        if d:IsA("GuiButton") and not d:IsDescendantOf(NX.gui) and isShown(d) then
+            local area = d.AbsoluteSize.X * d.AbsoluteSize.Y
+            if area < maxArea then
+                if contains(d, p) then
+                    if not bestArea or area < bestArea then best, bestArea = d, area end
+                else
+                    local dist = (center(d) - p).Magnitude
+                    if dist < 150 and (not nearDist or dist < nearDist) then near, nearDist = d, dist end
+                end
+            end
+        end
+    end
+    return best or near
+end
+
+local function vimClick(o)
+    if not VIM then return false end
+    local c = center(o)
+    local x, y = c.X, c.Y
+    local sg = o:FindFirstAncestorWhichIsA("ScreenGui")
+    if not (sg and sg.IgnoreGuiInset) then
+        y += GuiService:GetGuiInset().Y
+    end
+    pcall(function()
+        VIM:SendMouseMoveEvent(x, y, game)
+        task.wait(0.03)
+        VIM:SendMouseButtonEvent(x, y, 0, true, game, 1)
+        task.wait(0.06)
+        VIM:SendMouseButtonEvent(x, y, 0, false, game, 1)
+    end)
+    return true
+end
+
+local function clickGui(o)
+    local b = buttonAt(o) or o
+    local fired = false
+    if getconnections and b:IsA("GuiButton") then
+        for _, sig in ipairs({ "Activated", "MouseButton1Click" }) do
+            if not fired then
+                local ok, conns = pcall(function() return getconnections(b[sig]) end)
+                if ok and conns then
+                    for _, c in ipairs(conns) do
+                        if pcall(function() c:Fire() end) then fired = true end
+                    end
+                end
+            end
+        end
+    end
+    if not fired then vimClick(b) end
+    return true
+end
+
+local function questListShown()
+    for _, w in ipairs(NX.questNames) do
+        if findLabel(w, true) then return true end
+    end
+    return false
+end
+
+local function findQuestTab()
+    for _, d in ipairs(playerGui:GetDescendants()) do
+        if d:IsA("GuiButton") and not d:IsDescendantOf(NX.gui) and isShown(d) then
+            if string.find(string.lower(d.Name), "quest", 1, true) then return d end
+        end
+    end
+    return nil
+end
+
+local function openQuestList(alive)
+    if questListShown() then return true end
+    for _ = 1, 3 do
+        if not alive() then return false end
+        local menu = findLabel("menu", true)
+        local tab = findQuestTab()
+        if not tab and menu then
+            clickGui(menu)
+            task.wait(0.9)
+            tab = findQuestTab()
+        end
+        if tab then
+            clickGui(tab)
+            task.wait(0.8)
+        end
+        if questListShown() then return true end
+    end
+    return false
+end
+
+NX.g = { isShown = isShown, findLabel = findLabel, clickGui = clickGui,
+    openQuestList = openQuestList, questListShown = questListShown }
+
+print("NEXORA / Build A Boat (8/12) loaded")
+
+end)
+
+if not NX_OK8 then
+    warn("NEXORA P8 ERROR: " .. tostring(NX_ERR8))
+end--// NEXORA / Build A Boat | ส่วน 9/12 (เควส: Cloud/Target/Ramp/Thin Ice/Find Me/The Box)
+local NX_OK9, NX_ERR9 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.g then error("ต้องรันส่วน 1-8 ก่อน") end
+
+local RunService = game:GetService("RunService")
+local qStatus, iterWorld, touch = NX.qStatus, NX.iterWorld, NX.touch
+
+local function posOf(x)
+    if x:IsA("BasePart") then return x.Position end
+    if x:IsA("Model") then return x:GetPivot().Position end
+end
+local function moveTo(o, pos)
+    pcall(function()
+        if o:IsA("Model") then
+            o:PivotTo(CFrame.new(pos))
+        else
+            o.AssemblyLinearVelocity = Vector3.zero
+            o.CFrame = CFrame.new(pos)
+        end
+    end)
+end
+NX.posOf, NX.moveTo = posOf, moveTo
+
+local function has(inst, words)
+    local n = string.lower(inst.Name)
+    for _, w in ipairs(words) do
+        if string.find(n, w, 1, true) then return true end
+    end
+    return false
+end
+
+local function stagePart(i)
+    local ns = NX.normalStages()
+    local st = ns and ns:FindFirstChild("CaveStage" .. i)
+    return st and st:FindFirstChild("DarknessPart")
+end
+local function chestPart()
+    local ns = NX.normalStages()
+    local e = ns and ns:FindFirstChild("TheEnd")
+    local g = e and e:FindFirstChild("GoldenChest")
+    return g and g:FindFirstChild("Trigger")
+end
+
+local function runCourse(alive, label)
+    for i = 1, 10 do
+        local p = stagePart(i)
+        if not p then
+            qStatus.set("⚠️ ไม่พบด่าน (ต้องอยู่ในแมพ Build A Boat)", "⚠️ Stage not found")
+            return false
+        end
+        qStatus.set(label .. ": ด่าน " .. i .. "/10", label .. ": stage " .. i .. "/10")
+        if not NX.flyTo(p.Position, alive) then return false end
+        task.wait(0.1)
+    end
+    local chest = chestPart()
+    if chest then
+        qStatus.set(label .. ": ไปจุดจบ...", label .. ": heading to the end...")
+        return NX.flyTo(chest.Position, alive)
+    end
+    return true
+end
+
+-- ===== Cloud / Target / Ramp =====
+local function findObjs(words)
+    local out = {}
+    iterWorld(function(d)
+        if d:IsA("BasePart") or d:IsA("Model") then
+            local n = string.lower(d.Name)
+            for _, w in ipairs(words) do
+                if string.find(n, w, 1, true) then
+                    out[#out + 1] = { inst = d, pos = posOf(d) }
+                    break
+                end
+            end
+        end
+        return #out >= 40
+    end)
+    return out
+end
+
+local function cached(ctx, words)
+    local c = ctx.objCache
+    if not c or os.clock() - c.t > 15 then
+        c = { t = os.clock(), list = findObjs(words) }
+        ctx.objCache = c
+    end
+    return c.list
+end
+
+local function visit(o, alive)
+    if not NX.flyTo(o.pos + Vector3.new(0, 2, 0), alive) then return false end
+    local n = 0
+    local function hit(x)
+        if x:IsA("BasePart") then
+            touch(x)
+        elseif x:IsA("ProximityPrompt") then
+            pcall(function()
+                x.HoldDuration = 0
+                x.RequiresLineOfSight = false
+            end)
+            if fireproximityprompt then pcall(fireproximityprompt, x) end
+        elseif x:IsA("ClickDetector") then
+            if fireclickdetector then pcall(fireclickdetector, x) end
+        end
+    end
+    hit(o.inst)
+    for _, x in ipairs(o.inst:GetDescendants()) do
+        n += 1
+        if n > 25 then break end
+        hit(x)
+    end
+    task.wait(0.3)
+    return true
+end
+
+local function genericPass(ctx, alive, words)
+    local list = cached(ctx, words)
+    if #list == 0 then
+        task.wait(1.5)
+        return
+    end
+    local hrp = NX.getChar()
+    if hrp then
+        table.sort(list, function(a, b)
+            return (a.pos - hrp.Position).Magnitude < (b.pos - hrp.Position).Magnitude
+        end)
+    end
+    for _, o in ipairs(list) do
+        if not alive() then return end
+        if not visit(o, alive) then return end
+    end
+end
+
+-- ===== Thin Ice =====
+local function thinIcePass(ctx, alive)
+    if runCourse(alive, "Thin Ice") then
+        qStatus.set("Thin Ice: ถึงจุดจบแล้ว ✓", "Thin Ice: reached the end ✓")
+        task.wait(2.5)
+    elseif alive() then
+        qStatus.set("Thin Ice: ไปไม่ถึงจุดจบ", "Thin Ice: failed to reach the end")
+        task.wait(2)
+    end
+    ctx.done = true
+end
+
+-- ===== Find Me =====
+local GLUE = { "findme", "find me", "butter", "glue", "teleport" }
+local function findGlue(ctx)
+    local cd = ctx.cd
+    if cd and cd.Parent and cd:IsDescendantOf(workspace) then return cd end
+    local found
+    iterWorld(function(d)
+        if d:IsA("ClickDetector") then
+            local cur, depth = d, 0
+            while cur and cur ~= workspace and depth < 4 do
+                if has(cur, GLUE) then
+                    found = d
+                    return true
+                end
+                cur = cur.Parent
+                depth += 1
+            end
+        end
+        return false
+    end)
+    ctx.cd = found
+    return found
+end
+
+local function findMePass(ctx, alive)
+    ctx.clicks = ctx.clicks or 0
+    ctx.miss = ctx.miss or 0
+    local cd = findGlue(ctx)
+    if not cd then
+        ctx.miss += 1
+        qStatus.set("Find Me: ไม่พบบล็อก (กดปุ่ม 🔍 สแกน)", "Find Me: block not found (press scan)")
+        if ctx.miss >= 6 then ctx.done = true end
+        task.wait(1.5)
+        return
+    end
+    if not fireclickdetector then error("ตัวรันไม่รองรับ fireclickdetector") end
+    local part = cd.Parent
+    local before = posOf(part) or Vector3.zero
+    pcall(function() cd.MaxActivationDistance = 1000 end)
+    if not NX.flyTo(before + Vector3.new(0, 4, 0), alive) then return end
+    pcall(fireclickdetector, cd)
+    task.wait(1)
+    local after = part.Parent and posOf(part) or nil
+    if (not after) or (after - before).Magnitude > 3 then
+        ctx.clicks += 1
+        ctx.miss = 0
+        qStatus.set("Find Me: คลิกแล้ว " .. ctx.clicks .. "/5", "Find Me: clicked " .. ctx.clicks .. "/5")
+        if ctx.clicks >= 5 then
+            task.wait(1.5)
+            ctx.done = true
+        end
+    else
+        ctx.miss += 1
+        if ctx.miss >= 6 then ctx.done = true end
+    end
+end
+
+-- ===== The Box =====
+local function pickBox()
+    local hrp = NX.getChar()
+    if not hrp then return nil end
+    local best, bestScore, bestDist = nil, 0, math.huge
+    iterWorld(function(d)
+        if d:IsA("BasePart") or d:IsA("Model") then
+            local n = string.lower(d.Name)
+            local score = 0
+            if string.find(n, "mystery", 1, true) or string.find(n, "questbox", 1, true) then
+                score = 3
+            elseif string.find(n, "box", 1, true) and not string.find(n, "hitbox", 1, true) then
+                score = 1
+            end
+            local pos = score > 0 and posOf(d)
+            if pos then
+                if d:IsA("BasePart") and not d.Anchored then score += 1 end
+                local dist = (pos - hrp.Position).Magnitude
+                if (score >= 3 or dist < 300)
+                    and (score > bestScore or (score == bestScore and dist < bestDist)) then
+                    best, bestScore, bestDist = d, score, dist
+                end
+            end
+        end
+        return false
+    end)
+    return best
+end
+
+local function boxPass(ctx, alive)
+    local box = ctx.box
+    if not (box and box.Parent) then
+        box = pickBox()
+        ctx.box = box
+    end
+    if not box then
+        ctx.miss = (ctx.miss or 0) + 1
+        qStatus.set("The Box: ไม่พบกล่องปริศนา (กดปุ่ม 🔍 สแกน)", "The Box: box not found (press scan)")
+        if ctx.miss >= 5 then ctx.done = true end
+        task.wait(1.5)
+        return
+    end
+    qStatus.set("The Box: ไปหากล่อง...", "The Box: going to the box...")
+    if not NX.flyTo((posOf(box) or Vector3.zero) + Vector3.new(0, 5, 0), alive) then return end
+    local follow = RunService.Heartbeat:Connect(function()
+        local hrp = NX.getChar()
+        if hrp and box.Parent then moveTo(box, hrp.Position + Vector3.new(0, 5, 0)) end
+    end)
+    local ok, res = pcall(runCourse, alive, "The Box")
+    if ok and res then
+        qStatus.set("The Box: ส่งกล่องถึงจุดจบ ✓", "The Box: box delivered ✓")
+        task.wait(3)
+        ctx.done = true
+    end
+    follow:Disconnect()
+    if not ok then error(res) end
+end
+
+NX.passes = {
+    cloud = function(ctx, alive) return genericPass(ctx, alive, { "cloud" }) end,
+    target = function(ctx, alive) return genericPass(ctx, alive, { "target", "bullseye" }) end,
+    ramp = function(ctx, alive) return genericPass(ctx, alive, { "ramp" }) end,
+    thinice = thinIcePass,
+    findme = findMePass,
+    thebox = boxPass,
+}
+NX.objectivePass = function(name, ctx, alive)
+    local f = NX.passes[name]
+    if f then return f(ctx, alive) end
+end
+
+print("NEXORA / Build A Boat (9/12) loaded")
+
+end)
+
+if not NX_OK9 then
+    warn("NEXORA P9 ERROR: " .. tostring(NX_ERR9))
+end--// NEXORA / Build A Boat | ส่วน 10/12 (เควส Soccer + Dragon ต้องถือดาบ)
+local NX_OK10, NX_ERR10 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.passes then error("ต้องรันส่วน 1-9 ก่อน") end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local qStatus, iterWorld = NX.qStatus, NX.iterWorld
+local posOf = NX.posOf
+local findLabel, clickGui = NX.g.findLabel, NX.g.clickGui
+
+NX.addText("q_holdsword", "⚠️ กรุณาถือดาบ", "⚠️ Please hold a sword")
+
+-- ===== ตรวจว่าถือดาบอยู่ไหม =====
+local NOT_SWORD = { "hammer", "build", "paint", "delete", "scoop", "copy" }
+function NX.heldSword()
+    local c = player.Character
+    if not c then return nil end
+    for _, t in ipairs(c:GetChildren()) do
+        if t:IsA("Tool") then
+            local n = string.lower(t.Name)
+            local bad = false
+            for _, w in ipairs(NOT_SWORD) do
+                if string.find(n, w, 1, true) then bad = true break end
+            end
+            if not bad then return t end
+        end
+    end
+    return nil
+end
+function NX.warnSword()
+    qStatus.set(NX.TEXT.th.q_holdsword, NX.TEXT.en.q_holdsword)
+end
+
+-- ===== Soccer: พาลูกบอลลอยไปโกล =====
+local function soccerPass(ctx, alive)
+    local hrp = NX.getChar()
+    if not hrp then return end
+    if not (ctx.ball and ctx.ball.Parent) then
+        local best, bestScore
+        iterWorld(function(d)
+            if d:IsA("BasePart") and d.Size.Magnitude >= 3 then
+                local n = string.lower(d.Name)
+                if (string.find(n, "soccer", 1, true) or string.find(n, "football", 1, true) or n == "ball")
+                    and (d.Position - hrp.Position).Magnitude < 500 then
+                    local score = d.Size.Magnitude + (d.Anchored and 0 or 1000)
+                    if not bestScore or score > bestScore then best, bestScore = d, score end
+                end
+            end
+            return false
+        end)
+        ctx.ball = best
+    end
+    local ball = ctx.ball
+    if ball and not (ctx.goal and ctx.goal.Parent) then
+        local best, bestScore
+        iterWorld(function(d)
+            if d:IsA("BasePart") and d ~= ball then
+                local n = string.lower(d.Name)
+                local score = 0
+                if string.find(n, "goal", 1, true) then
+                    score = 2
+                elseif n == "net" or string.find(n, "^net") then
+                    score = 1
+                end
+                if score > 0 then
+                    local s = score * 10000 - (d.Position - ball.Position).Magnitude
+                    if not bestScore or s > bestScore then best, bestScore = d, s end
+                end
+            end
+            return false
+        end)
+        ctx.goal = best
+    end
+    local goal = ctx.goal
+    if not (ball and goal) then
+        ctx.miss = (ctx.miss or 0) + 1
+        qStatus.set("Soccer: ไม่พบบอล/โกล (กดปุ่ม 🔍 สแกน)", "Soccer: ball/goal not found (press scan)")
+        if ctx.miss >= 5 then ctx.done = true end
+        task.wait(1.5)
+        return
+    end
+    qStatus.set("Soccer: ไปหาลูกบอล...", "Soccer: going to the ball...")
+    if not NX.flyTo(ball.Position + Vector3.new(0, ball.Size.Y / 2 + 4, 0), alive) then return end
+    local follow = RunService.Heartbeat:Connect(function()
+        local h = NX.getChar()
+        if h and ball.Parent then
+            ball.AssemblyLinearVelocity = Vector3.zero
+            ball.CFrame = CFrame.new(h.Position)
+        end
+    end)
+    local ok, res = pcall(function()
+        qStatus.set("Soccer: พาลูกบอลลอยไปโกล...", "Soccer: floating the ball to the goal...")
+        local r = NX.flyTo(goal.Position, alive)
+        if r and firetouchinterest then
+            pcall(function()
+                firetouchinterest(ball, goal, 0)
+                firetouchinterest(ball, goal, 1)
+            end)
+        end
+        if r then task.wait(3) end
+        return r
+    end)
+    follow:Disconnect()
+    if not ok then error(res) end
+    if res then
+        qStatus.set("Soccer: ลูกบอลถึงโกลแล้ว ✓", "Soccer: ball in goal ✓")
+        ctx.done = true
+    end
+end
+
+-- ===== Dragon: ถือดาบเอง แล้วสคริปต์พาไปฟัน =====
+local function dragonPass(ctx, alive)
+    local sword = NX.heldSword()
+    if not sword then
+        NX.warnSword()
+        task.wait(2)
+        ctx.done = true
+        return
+    end
+    local hrp = NX.getChar()
+    if not hrp then return end
+
+    if not ctx.launched then
+        ctx.launched = true
+        local l = findLabel("launch", true)
+        if l then
+            qStatus.set("Dragon: กด Launch ปลุกมังกร...", "Dragon: pressing Launch...")
+            clickGui(l)
+            task.wait(2.5)
+        end
+    end
+
+    local dr = ctx.dragon
+    if not (dr and dr.Parent) then
+        dr = nil
+        iterWorld(function(d)
+            if (d:IsA("Model") or d:IsA("BasePart")) and string.find(string.lower(d.Name), "dragon", 1, true) then
+                dr = d
+                return true
+            end
+            return false
+        end)
+        ctx.dragon = dr
+    end
+    if not dr then
+        ctx.miss = (ctx.miss or 0) + 1
+        qStatus.set("Dragon: ไม่พบมังกร (กดปุ่ม 🔍 สแกน)", "Dragon: not found (press scan)")
+        if ctx.miss >= 5 then ctx.done = true end
+        task.wait(1.5)
+        return
+    end
+
+    local function dead()
+        if not dr.Parent then return true end
+        local h = dr:FindFirstChildOfClass("Humanoid")
+        return h ~= nil and h.Health <= 0
+    end
+
+    local handle = sword:FindFirstChild("Handle") or sword:FindFirstChildWhichIsA("BasePart")
+    local parts = {}
+    if dr:IsA("BasePart") then
+        parts[1] = dr
+    else
+        for _, d in ipairs(dr:GetDescendants()) do
+            if d:IsA("BasePart") then
+                parts[#parts + 1] = d
+                if #parts >= 8 then break end
+            end
+        end
+    end
+
+    qStatus.set("Dragon: บินไปหามังกร...", "Dragon: flying to the dragon...")
+    if not NX.flyTo((posOf(dr) or hrp.Position) + Vector3.new(0, 4, 8), alive) then return end
+    qStatus.set("Dragon: กำลังฟันมังกร...", "Dragon: slashing the dragon...")
+
+    local t0 = os.clock()
+    while alive() and not dead() and os.clock() - t0 < 12 do
+        local h = NX.getChar()
+        local p = posOf(dr)
+        if not (h and p) then break end
+        local tool = NX.heldSword()
+        if not tool then
+            NX.warnSword()
+            ctx.done = true
+            return
+        end
+        h.AssemblyLinearVelocity = Vector3.zero
+        h.CFrame = CFrame.lookAt(p + Vector3.new(0, 4, 8), p)
+        pcall(function() tool:Activate() end)
+        if handle and handle.Parent and firetouchinterest then
+            for _, part in ipairs(parts) do
+                pcall(function()
+                    firetouchinterest(handle, part, 0)
+                    firetouchinterest(handle, part, 1)
+                end)
+            end
+        end
+        task.wait(0.12)
+    end
+    if dead() then
+        qStatus.set("Dragon: ฆ่ามังกรแล้ว ✓", "Dragon: defeated ✓")
+        task.wait(2)
+        ctx.done = true
+    end
+end
+
+NX.passes.soccer = soccerPass
+NX.passes.dragon = dragonPass
+
+print("NEXORA / Build A Boat (10/12) loaded")
+
+end)
+
+if not NX_OK10 then
+    warn("NEXORA P10 ERROR: " .. tostring(NX_ERR10))
+end--// NEXORA / Build A Boat | ส่วน 11/12 (เลือกเควส + ปุ่มทำเควส + สแกน)
+local NX_OK11, NX_ERR11 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.passes or not NX.passes.dragon then error("ต้องรันส่วน 1-10 ก่อน") end
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local questPage = NX.pages.quest
+local qStatus = NX.qStatus
+local iterWorld = NX.iterWorld
+local isShown, findLabel, clickGui = NX.g.isShown, NX.g.findLabel, NX.g.clickGui
+local openQuestList, questListShown = NX.g.openQuestList, NX.g.questListShown
+local TEXT, labelRefs = NX.TEXT, NX.labelRefs
+
+NX.addText("q_pick", "📜 เลือกเควส", "📜 Pick quest")
+NX.addText("q_run", "▶ ทำเควสที่เลือก", "▶ Do selected quest")
+NX.addText("q_stop", "■ หยุดทำเควส", "■ Stop quest")
+NX.addText("q_loop", "🔁 ทำเควสวนซ้ำ", "🔁 Repeat quest")
+NX.addText("q_time", "⏱️ เวลาต่อเควส (วินาที)", "⏱️ Seconds per quest")
+NX.addText("q_scan", "🔍 สแกนข้อมูลเกม (คัดลอกส่งให้ผู้พัฒนา)", "🔍 Scan game data (copy for dev)")
+NX.addText("qn_cloud", "☁️ Cloud", "☁️ Cloud")
+NX.addText("qn_target", "🎯 Target", "🎯 Target")
+NX.addText("qn_soccer", "⚽ Soccer", "⚽ Soccer")
+NX.addText("qn_ramp", "🛝 Ramp", "🛝 Ramp")
+NX.addText("qn_findme", "🔎 Find Me", "🔎 Find Me")
+NX.addText("qn_thebox", "📦 The Box", "📦 The Box")
+NX.addText("qn_thinice", "🧊 Thin Ice", "🧊 Thin Ice")
+NX.addText("qn_dragon", "🐉 Dragon", "🐉 Dragon")
+
+local qSecs = 40
+local MIN_SECS = { soccer = 60, findme = 60, thebox = 150, thinice = 120, dragon = 200 }
+
+local function cancelActive()
+    local c = findLabel("cancel", true)
+    if c then
+        clickGui(c)
+        task.wait(1)
+    end
+end
+
+local function doOneQuest(name, alive)
+    local pretty = name:sub(1, 1):upper() .. name:sub(2)
+    if name == "dragon" and not NX.heldSword() then
+        NX.warnSword()
+        return false
+    end
+    qStatus.set("เปิดรายการเควส...", "Opening quest list...")
+    if not openQuestList(alive) then
+        qStatus.set("⚠️ หาเมนูเควสไม่เจอ (กดปุ่ม 🔍 สแกน)", "⚠️ Quest menu not found (press 🔍 scan)")
+        return false
+    end
+    cancelActive()
+    if not questListShown() and not openQuestList(alive) then return false end
+    local lab = findLabel(name, true)
+    if not lab then
+        qStatus.set("⚠️ ไม่พบเควส " .. pretty, "⚠️ Quest " .. pretty .. " not found")
+        return false
+    end
+    qStatus.set("เลือกเควส " .. pretty, "Selecting " .. pretty)
+    clickGui(lab)
+    task.wait(0.7)
+    local st = findLabel("start", true)
+    if not st then
+        qStatus.set("⚠️ ไม่พบปุ่ม Start", "⚠️ Start button not found")
+        return false
+    end
+    qStatus.set("กด Start: " .. pretty, "Pressing Start: " .. pretty)
+    clickGui(st)
+    task.wait(2)
+
+    local t0 = os.clock()
+    local limit = math.max(qSecs, MIN_SECS[name] or 0)
+    local ctx = {}
+    local function alive2() return alive() and not ctx.done and os.clock() - t0 < limit end
+    local wasHidden = not questListShown()
+    local errs = 0
+    while alive2() do
+        qStatus.set("กำลังทำเควส " .. pretty .. " (" .. math.floor(os.clock() - t0) .. "s)",
+            "Doing " .. pretty .. " (" .. math.floor(os.clock() - t0) .. "s)")
+        local ok, err = pcall(NX.objectivePass, name, ctx, alive2)
+        if not ok then
+            qStatus.set("⚠️ " .. tostring(err), "⚠️ " .. tostring(err))
+            errs += 1
+            if errs >= 3 then break end
+        end
+        task.wait(0.5)
+        local shown = questListShown()
+        if wasHidden and shown then break end
+        if not shown then wasHidden = true end
+    end
+    if alive() then
+        qStatus.set("ปิดเควส " .. pretty .. "...", "Ending " .. pretty .. "...")
+        if openQuestList(alive) then
+            local l2 = findLabel(name, true)
+            if l2 then
+                clickGui(l2)
+                task.wait(0.6)
+            end
+            cancelActive()
+        end
+    end
+    return true
+end
+
+-- ===== เมนูเลือกเควส =====
+local selected = "cloud"
+local keys = {}
+for _, n in ipairs(NX.questNames) do keys[#keys + 1] = "qn_" .. n end
+NX.dropdown(questPage, 2, "q_pick", keys, "qn_cloud", function(k)
+    selected = k:sub(4)
+end)
+
+local loopT
+local runBtn
+runBtn = NX.button(questPage, 3, "q_run", function()
+    if NX.qActive then
+        NX.stopQuests()
+        return
+    end
+    local name = selected
+    if name == "dragon" and not NX.heldSword() then
+        NX.warnSword()
+        return
+    end
+    NX.startQuestFn(function(alive)
+        if NX.isOpen then NX.setOpen(false) end
+        repeat
+            if not doOneQuest(name, alive) then return end
+            if not alive() then return end
+            task.wait(1.5)
+        until not loopT.get()
+        qStatus.set("✓ เสร็จเควส " .. name, "✓ Finished " .. name)
+    end)
+end)
+
+function NX.qRefresh()
+    labelRefs[runBtn] = NX.qActive and "q_stop" or "q_run"
+    runBtn.Text = TEXT[NX.lang][labelRefs[runBtn]]
+end
+
+loopT = NX.toggle(questPage, 4, "q_loop", false)
+NX.stepper(questPage, 5, "q_time", 10, 180, 10, 40, function(v) qSecs = v end)
+
+-- ===== ปุ่มสแกนข้อมูลเกม =====
+local function dump()
+    local out = {}
+    local function add(s) out[#out + 1] = s end
+    add("== NEXORA DUMP == place " .. tostring(game.PlaceId))
+    add("-- GUI --")
+    local n = 0
+    for _, d in ipairs(playerGui:GetDescendants()) do
+        if d:IsA("GuiObject") and not d:IsDescendantOf(NX.gui) and isShown(d) then
+            local t = (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text or ""
+            if d:IsA("GuiButton") or t ~= "" then
+                n += 1
+                if n > 150 then break end
+                local f = d:GetFullName():gsub("^Players%.[^%.]+%.PlayerGui%.", "GUI.")
+                add(d.ClassName .. " | " .. f .. (t ~= "" and (" | '" .. t .. "'") or ""))
+            end
+        end
+    end
+    add("-- TOOLS --")
+    local bp = player:FindFirstChildOfClass("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do add("Backpack | " .. t.ClassName .. " | " .. t.Name) end
+    end
+    local ch = player.Character
+    if ch then
+        for _, t in ipairs(ch:GetChildren()) do
+            if t:IsA("Tool") then add("Held | " .. t.ClassName .. " | " .. t.Name) end
+        end
+    end
+    add("-- REMOTES --")
+    local r = 0
+    for _, d in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+        if d:IsA("RemoteEvent") or d:IsA("RemoteFunction") then
+            r += 1
+            if r > 80 then break end
+            add(d.ClassName .. " | " .. d:GetFullName())
+        end
+    end
+    add("-- WORKSPACE --")
+    local keysW = { "quest", "cloud", "target", "soccer", "ramp", "goal", "ball",
+        "dragon", "mystery", "box", "glue", "butter", "findme", "sword" }
+    local m = 0
+    iterWorld(function(d)
+        if d:IsA("BasePart") or d:IsA("Model") or d:IsA("Folder") then
+            local nm = string.lower(d.Name)
+            for _, k in ipairs(keysW) do
+                if string.find(nm, k, 1, true) then
+                    m += 1
+                    local pos = d:IsA("BasePart") and d.Position or (d:IsA("Model") and d:GetPivot().Position)
+                    add(d.ClassName .. " | " .. d:GetFullName()
+                        .. (pos and (" | " .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)) or ""))
+                    break
+                end
+            end
+        end
+        return m >= 200
+    end)
+    add("-- PROMPTS / CLICKS --")
+    local k = 0
+    iterWorld(function(d)
+        if d:IsA("ProximityPrompt") or d:IsA("ClickDetector") then
+            k += 1
+            add(d.ClassName .. " | " .. d:GetFullName())
+        end
+        return k >= 120
+    end)
+    local text = table.concat(out, "\n")
+    print(text)
+    local clip = setclipboard or toclipboard
+    local ok = clip and pcall(clip, text)
+    if ok then
+        qStatus.set("✓ สแกนแล้ว คัดลอกไว้ (" .. #out .. " บรรทัด) วางส่งได้เลย", "✓ Scanned & copied (" .. #out .. " lines)")
+    else
+        qStatus.set("✓ สแกนแล้ว (ดูใน Console กด F9)", "✓ Scanned (see Console)")
+    end
+end
+NX.button(questPage, 6, "q_scan", function()
+    qStatus.set("กำลังสแกน...", "Scanning...")
+    local ok, err = pcall(dump)
+    if not ok then qStatus.set("⚠️ " .. tostring(err), "⚠️ " .. tostring(err)) end
+end)
+
+print("NEXORA / Build A Boat (11/12) loaded")
+
+end)
+
+if not NX_OK11 then
+    warn("NEXORA P11 ERROR: " .. tostring(NX_ERR11))
+end--// NEXORA / Build A Boat | ส่วน 11.5/12 (ภารกิจลับ v2) ** รันหลังส่วน 11 ก่อนส่วน 12 **
+local NX_OKS, NX_ERRS = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.qRefresh or not NX.passes then error("ต้องรันส่วน 1-11 ก่อน") end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local qStatus, iterWorld, touch = NX.qStatus, NX.iterWorld, NX.touch
+local posOf = NX.posOf
+local TEXT, labelRefs = NX.TEXT, NX.labelRefs
+
+NX.addText("s_pick", "🕵️ เลือกภารกิจลับ", "🕵️ Pick secret quest")
+NX.addText("s_run", "▶ ทำภารกิจลับที่เลือก", "▶ Do selected secret quest")
+NX.addText("s_loop", "🔁 ทำภารกิจลับวนซ้ำ", "🔁 Repeat secret quest")
+NX.addText("s_scan", "🔍 ค้นหา/เช็คสถานะภารกิจลับ (คัดลอกข้อมูล)", "🔍 Scan/check secrets (copy data)")
+NX.addText("s_reset", "♻️ ล้างสถานะที่จำไว้", "♻️ Reset remembered status")
+NX.addText("sn_all", "ทั้งหมดที่ยังไม่ทำ", "All unfinished")
+NX.addText("sn_crystal", "💎 คริสตัล", "💎 Crystal")
+NX.addText("sn_castle", "🏰 Castle Wall", "🏰 Castle Wall")
+NX.addText("sn_west", "🤠 Wild West", "🤠 Wild West")
+NX.addText("sn_toxic", "☣️ Toxic Waste", "☣️ Toxic Waste")
+
+env.NX_SECRET_DONE = env.NX_SECRET_DONE or {}
+local doneT = env.NX_SECRET_DONE
+
+local SECRETS = {
+    { key = "crystal", name = "Crystal", words = { "crystal", "prism" }, data = { "crystal" } },
+    { key = "castle", name = "Castle Wall", words = { "castle", "noobattack" }, data = { "castle", "noob" } },
+    { key = "west", name = "Wild West", words = { "wildwest", "wild west", "western", "west" }, data = { "west", "mine" } },
+    { key = "toxic", name = "Toxic Waste", words = { "toxic", "waste" }, data = { "toxic" } },
+}
+
+local function lname(x) return string.lower(x.Name) end
+local function hasWord(inst, words)
+    local n = lname(inst)
+    for _, w in ipairs(words) do
+        if string.find(n, w, 1, true) then return true end
+    end
+    return false
+end
+
+-- ===== เช็คว่าทำแล้วหรือยัง =====
+local function checkData(sec)
+    for _, root in ipairs({ player, player:FindFirstChild("leaderstats") }) do
+        if root then
+            for _, d in ipairs(root:GetDescendants()) do
+                if d:IsA("BoolValue") or d:IsA("IntValue") or d:IsA("NumberValue") then
+                    local n = lname(d)
+                    for _, w in ipairs(sec.data) do
+                        if string.find(n, w, 1, true) and string.find(n, "secret", 1, true) then
+                            local v = d.Value
+                            return (v == true) or (type(v) == "number" and v > 0)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+local function isDone(sec)
+    return doneT[sec.key] == true or checkData(sec) == true
+end
+
+-- ===== หาด่าน =====
+local function findStages(sec)
+    local out, seen = {}, {}
+    local function add(d) if not seen[d] then seen[d] = true; out[#out + 1] = d end end
+    local bs = workspace:FindFirstChild("BoatStages")
+    if bs then
+        for _, d in ipairs(bs:GetDescendants()) do
+            if (d:IsA("Model") or d:IsA("Folder")) and hasWord(d, sec.words) then add(d) end
+            if #out >= 6 then return out end
+        end
+    end
+    if #out == 0 then
+        iterWorld(function(d)
+            if (d:IsA("Model") or d:IsA("Folder")) and hasWord(d, sec.words) then add(d) end
+            return #out >= 6
+        end)
+    end
+    return out
+end
+
+local function stagePos(st)
+    if st:IsA("Model") then return st:GetPivot().Position end
+    local sum, n = Vector3.zero, 0
+    for _, d in ipairs(st:GetDescendants()) do
+        if d:IsA("BasePart") then sum += d.Position; n += 1 end
+    end
+    return n > 0 and sum / n or nil
+end
+
+-- ===== วาร์ป / กดของ =====
+local function warp(pos, alive)
+    local hrp = NX.getChar()
+    if not hrp then return false end
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    hrp.CFrame = CFrame.new(pos)
+    task.wait(0.3)
+    return alive()
+end
+
+local function hit(x)
+    if x:IsA("BasePart") then
+        touch(x)
+    elseif x:IsA("ProximityPrompt") then
+        pcall(function() x.HoldDuration = 0; x.RequiresLineOfSight = false; x.MaxActivationDistance = 60 end)
+        if fireproximityprompt then pcall(fireproximityprompt, x) end
+    elseif x:IsA("ClickDetector") then
+        pcall(function() x.MaxActivationDistance = 1000 end)
+        if fireclickdetector then pcall(fireclickdetector, x) end
+    end
+end
+
+local CHEST = { "chest", "treasure", "secret", "reward" }
+local SKIP = { "kill", "lava", "dark", "spawn", "checkpoint", "water", "damage" }
+
+local function interactables(stages)
+    local out, seen = {}, {}
+    for _, st in ipairs(stages) do
+        for i, d in ipairs(st:GetDescendants()) do
+            if i % 4000 == 0 then task.wait() end
+            local part
+            if d:IsA("ProximityPrompt") or d:IsA("ClickDetector") or d:IsA("TouchTransmitter") then
+                part = d.Parent
+            elseif d:IsA("BasePart") and hasWord(d, CHEST) then
+                part = d
+            end
+            if part and part:IsA("BasePart") and not seen[part] and not hasWord(part, SKIP) then
+                seen[part] = true
+                out[#out + 1] = part
+                if #out >= 40 then return out end
+            end
+        end
+    end
+    local hrp = NX.getChar()
+    table.sort(out, function(a, b)
+        local ca, cb = hasWord(a, CHEST), hasWord(b, CHEST)
+        if ca ~= cb then return ca end
+        if hrp then return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude end
+        return false
+    end)
+    return out
+end
+
+local function useParts(parts, alive, label)
+    local count = 0
+    for _, p in ipairs(parts) do
+        if not alive() then return count end
+        if p.Parent then
+            qStatus.set(label .. ": กำลังเก็บ " .. p.Name .. " (" .. (count + 1) .. "/" .. #parts .. ")",
+                label .. ": using " .. p.Name .. " (" .. (count + 1) .. "/" .. #parts .. ")")
+            if not warp(p.Position + Vector3.new(0, 3, 0), alive) then return count end
+            hit(p)
+            for i, x in ipairs(p:GetDescendants()) do
+                if i > 20 then break end
+                hit(x)
+            end
+            task.wait(0.5)
+            count += 1
+        end
+    end
+    return count
+end
+
+local function gotoStage(sec, alive)
+    local stages = findStages(sec)
+    if #stages == 0 then
+        qStatus.set("⚠️ " .. sec.name .. ": ไม่พบด่าน (กดปุ่ม 🔍 ค้นหา แล้วส่งข้อมูลมา)",
+            "⚠️ " .. sec.name .. ": stage not found (use scan)")
+        return nil
+    end
+    qStatus.set(sec.name .. ": วาร์ปไปด่าน...", sec.name .. ": warping to stage...")
+    local p = stagePos(stages[1])
+    if p and not warp(p + Vector3.new(0, 10, 0), alive) then return nil end
+    task.wait(1.2) -- ให้ด่านโหลด
+    return stages
+end
+
+local function runInteract(sec, alive)
+    local stages = gotoStage(sec, alive)
+    if not stages then return false end
+    local parts = interactables(stages)
+    if #parts == 0 then
+        qStatus.set("⚠️ " .. sec.name .. ": เจอด่านแต่ไม่เจอหีบ/ปุ่มให้กด (กดปุ่ม 🔍 ค้นหา)",
+            "⚠️ " .. sec.name .. ": stage found but nothing to use (scan)")
+        return false
+    end
+    return useParts(parts, alive, sec.name) > 0
+end
+
+-- ===== Castle Wall =====
+local function castleRun(sec, alive)
+    if not NX.heldSword() then
+        NX.warnSword()
+        return false
+    end
+    local stages = gotoStage(sec, alive)
+    if not stages then return false end
+    -- พยายามเปิดสะพานชักซ้าย
+    local bridges = {}
+    for _, st in ipairs(stages) do
+        for _, d in ipairs(st:GetDescendants()) do
+            if d:IsA("BasePart") and string.find(lname(d), "bridge", 1, true) then bridges[#bridges + 1] = d end
+            if #bridges >= 6 then break end
+        end
+    end
+    for _, b in ipairs(bridges) do
+        if not alive() then return false end
+        hit(b)
+        for i, x in ipairs(b:GetDescendants()) do if i > 10 then break end hit(x) end
+    end
+    qStatus.set("Castle: สู้กับศัตรู...", "Castle: fighting...")
+    local quiet, t0 = 0, os.clock()
+    while alive() and os.clock() - t0 < 240 and quiet < 12 do
+        local hrp = NX.getChar()
+        if not hrp then break end
+        local target, td = nil, 150
+        for _, d in ipairs(workspace:GetDescendants()) do
+            if d:IsA("Humanoid") and d.Health > 0 and not Players:GetPlayerFromCharacter(d.Parent) then
+                local r = d.Parent:FindFirstChild("HumanoidRootPart") or d.Parent:FindFirstChildWhichIsA("BasePart")
+                if r then
+                    local dist = (r.Position - hrp.Position).Magnitude
+                    if dist < td then target, td = r, dist end
+                end
+            end
+        end
+        if target then
+            quiet = 0
+            local tool = NX.heldSword()
+            if not tool then NX.warnSword() return false end
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.CFrame = CFrame.lookAt(target.Position + Vector3.new(0, 3, 6), target.Position)
+            pcall(function() tool:Activate() end)
+            local h = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart")
+            if h and firetouchinterest then
+                pcall(function() firetouchinterest(h, target, 0) firetouchinterest(h, target, 1) end)
+            end
+            task.wait(0.12)
+        else
+            quiet += 1
+            task.wait(1)
+        end
+    end
+    if not alive() then return false end
+    local parts = interactables(stages)
+    return useParts(parts, alive, "Castle") > 0
+end
+
+-- ===== Crystal =====
+local function colorName(c)
+    local h, s, v = c:ToHSV()
+    h = h * 360
+    if v < 0.22 then return "black" end
+    if s < 0.18 then return v > 0.75 and "white" or "gray" end
+    if h < 20 or h >= 335 then return "red" end
+    if h < 45 then return "orange" end
+    if h < 70 then return "yellow" end
+    if h < 165 then return "green" end
+    if h < 260 then return "blue" end
+    return "purple"
+end
+local PLANS = {
+    white = { "yellow", "blue", "black" },
+    yellow = { "green", "white", "purple" },
+}
+local CHANGER = { "light", "lamp", "gate", "beam", "color", "pad", "portal", "orb", "lens", "station" }
+local TUBE = { "tube", "vial", "capsule", "tank", "slot", "socket", "jar", "cylinder", "pod" }
+
+local function crystalRun(sec, alive)
+    local stages = gotoStage(sec, alive)
+    if not stages then return false end
+    local crystals = {}
+    for _, st in ipairs(stages) do
+        for _, d in ipairs(st:GetDescendants()) do
+            if d:IsA("BasePart") and string.find(lname(d), "crystal", 1, true) and not d.Anchored then
+                crystals[#crystals + 1] = d
+            end
+            if #crystals >= 12 then break end
+        end
+    end
+    local placed = 0
+    for _, cr in ipairs(crystals) do
+        if not alive() then return false end
+        local plan = PLANS[colorName(cr.Color)]
+        if plan then
+            qStatus.set("Crystal: " .. table.concat(plan, " → "), "Crystal: " .. table.concat(plan, " → "))
+            local carry = RunService.Heartbeat:Connect(function()
+                local h = NX.getChar()
+                if h and cr.Parent then
+                    cr.AssemblyLinearVelocity = Vector3.zero
+                    cr.CFrame = CFrame.new(h.Position + Vector3.new(0, 4, 0))
+                end
+            end)
+            local ok = pcall(function()
+                if not warp(cr.Position + Vector3.new(0, 5, 0), alive) then error("warp") end
+                for _, want in ipairs(plan) do
+                    local best, bd
+                    for _, st in ipairs(stages) do
+                        for _, d in ipairs(st:GetDescendants()) do
+                            if d:IsA("BasePart") and d ~= cr and not string.find(lname(d), "crystal", 1, true)
+                                and colorName(d.Color) == want and hasWord(d, CHANGER) then
+                                local dist = (d.Position - cr.Position).Magnitude
+                                if not bd or dist < bd then best, bd = d, dist end
+                            end
+                        end
+                    end
+                    if not best then error("changer " .. want) end
+                    warp(best.Position + Vector3.new(0, 3, 0), alive)
+                    hit(best)
+                    task.wait(0.8)
+                end
+                local tubes = {}
+                for _, st in ipairs(stages) do
+                    for _, d in ipairs(st:GetDescendants()) do
+                        if d:IsA("BasePart") and hasWord(d, TUBE) then tubes[#tubes + 1] = d end
+                    end
+                end
+                local tube = tubes[placed + 1] or tubes[1]
+                if not tube then error("tube") end
+                warp(tube.Position + Vector3.new(0, 2, 0), alive)
+                hit(tube)
+                task.wait(1)
+                placed += 1
+            end)
+            carry:Disconnect()
+            if not ok then
+                qStatus.set("⚠️ Crystal: ติดขั้นตอน ลองกดทุกอย่างในด่านแทน", "⚠️ Crystal: step failed, trying generic")
+                task.wait(1.5)
+            end
+        end
+    end
+    local parts = interactables(stages)
+    local n = useParts(parts, alive, "Crystal")
+    return placed >= 3 and n > 0
+end
+
+local RUNNERS = {
+    crystal = crystalRun,
+    castle = castleRun,
+    west = function(s, a) return runInteract(s, a) end,
+    toxic = function(s, a) return runInteract(s, a) end,
+}
+
+-- ===== UI =====
+local page = NX.pages.quest
+local sStatus = NX.status(page, 7)
+sStatus.set("ภารกิจลับ: ยังไม่ได้ค้นหา", "Secrets: not scanned")
+
+local function summary()
+    local parts = {}
+    for _, sec in ipairs(SECRETS) do
+        local found = #findStages(sec) > 0 and "" or "?"
+        parts[#parts + 1] = sec.name .. " " .. (isDone(sec) and "✓" or "✗") .. found
+    end
+    local s = table.concat(parts, " | ")
+    sStatus.set(s .. "  (? = ไม่พบด่าน)", s .. "  (? = no stage)")
+end
+
+local selected = "all"
+local keys = { "sn_all" }
+for _, s in ipairs(SECRETS) do keys[#keys + 1] = "sn_" .. s.key end
+NX.dropdown(page, 8, "s_pick", keys, "sn_all", function(k) selected = k:sub(4) end)
+
+local loopT
+local sRun
+sRun = NX.button(page, 9, "s_run", function()
+    if NX.qActive then NX.stopQuests() return end
+    local pick = selected
+    NX.startQuestFn(function(alive)
+        if NX.isOpen then NX.setOpen(false) end
+        repeat
+            local ran = false
+            for _, sec in ipairs(SECRETS) do
+                if (pick == "all" or pick == sec.key) and alive() then
+                    if isDone(sec) then
+                        qStatus.set(sec.name .. " ทำแล้ว ข้าม (ล้างสถานะได้ที่ปุ่ม ♻️)", sec.name .. " done, skipped")
+                        task.wait(0.8)
+                    else
+                        ran = true
+                        qStatus.set("เริ่มภารกิจลับ: " .. sec.name, "Secret quest: " .. sec.name)
+                        local ok, res = pcall(RUNNERS[sec.key], sec, alive)
+                        if ok and res then
+                            doneT[sec.key] = true
+                            qStatus.set("✓ " .. sec.name .. " เสร็จแล้ว", "✓ " .. sec.name .. " done")
+                            task.wait(1.5)
+                        elseif not ok then
+                            qStatus.set("⚠️ " .. tostring(res), "⚠️ " .. tostring(res))
+                            task.wait(2)
+                        else
+                            task.wait(2)
+                        end
+                    end
+                end
+            end
+            if not ran then break end
+            task.wait(1.5)
+        until not alive() or not loopT.get()
+        if alive() then
+            pcall(summary)
+        end
+    end)
+end)
+loopT = NX.toggle(page, 10, "s_loop", false)
+
+-- ปุ่มสแกน: คัดลอกรายชื่อด่าน/วัตถุที่เจอ
+local function dump()
+    local out = {}
+    local function add(s) out[#out + 1] = s end
+    local bs = workspace:FindFirstChild("BoatStages")
+    add("BoatStages: " .. (bs and "found" or "NOT FOUND"))
+    if bs then
+        for _, c in ipairs(bs:GetChildren()) do
+            add("  " .. c.ClassName .. " " .. c.Name)
+            if c:IsA("Folder") or c:IsA("Model") then
+                for i, c2 in ipairs(c:GetChildren()) do
+                    if i > 40 then break end
+                    add("     " .. c2.ClassName .. " " .. c2.Name)
+                end
+            end
+        end
+    end
+    for _, sec in ipairs(SECRETS) do
+        local st = findStages(sec)
+        local its = interactables(st)
+        add(sec.key .. ": stages=" .. #st .. " interactables=" .. #its .. " done=" .. tostring(isDone(sec)))
+        for _, s in ipairs(st) do add("   stage: " .. s:GetFullName()) end
+        for i, p in ipairs(its) do
+            if i > 10 then break end
+            add("   obj: " .. p:GetFullName())
+        end
+    end
+    local text = table.concat(out, "\n")
+    print(text)
+    local clip = setclipboard or toclipboard
+    if clip then pcall(clip, text) end
+end
+NX.button(page, 11, "s_scan", function()
+    sStatus.set("กำลังค้นหา...", "Scanning...")
+    local ok, err = pcall(function() dump(); summary() end)
+    if not ok then sStatus.set("⚠️ " .. tostring(err), "⚠️ " .. tostring(err)) end
+end)
+NX.button(page, 12, "s_reset", function()
+    for k in pairs(doneT) do doneT[k] = nil end
+    pcall(summary)
+end)
+
+-- ให้ปุ่มทำภารกิจลับเปลี่ยนเป็น "หยุด" ตอนกำลังทำ
+local oldRefresh = NX.qRefresh
+function NX.qRefresh()
+    pcall(oldRefresh)
+    labelRefs[sRun] = NX.qActive and "q_stop" or "s_run"
+    sRun.Text = TEXT[NX.lang][labelRefs[sRun]] or ""
+end
+
+print("NEXORA / Build A Boat (11.5/12 secret v2) loaded")
+
+end)
+
+if not NX_OKS then
+    warn("NEXORA P11.5 ERROR: " .. tostring(NX_ERRS))
+end--// NEXORA / Build A Boat | ส่วน 12/12 (แท็บ + ภาษา ต้องรันเป็นส่วนสุดท้าย)
+local NX_OK12, NX_ERR12 = pcall(function()
+
+local env = (getgenv and getgenv()) or _G
+local NX = env.NX_CORE
+if not NX or not NX.qRefresh then error("ต้องรันส่วน 1-11 ก่อน") end
+
+local WHITE = NX.colors.WHITE
+local cuteButton, round, stroke = NX.cuteButton, NX.round, NX.stroke
+local TEXT, labelRefs = NX.TEXT, NX.labelRefs
+
+local tabButtons = {}
+
+local function applyLanguage()
+    local t = TEXT[NX.lang]
+    for i, cat in ipairs(NX.categories) do
+        tabButtons[i].Text = cat.emoji .. " " .. t[cat.key]
+    end
+    for label, key in pairs(labelRefs) do
+        label.Text = t[key] or key
+    end
+    for _, f in ipairs(NX.refreshers) do pcall(f) end
+    NX.welcome.Text = t.welcome
+    NX.langLabel.Text = "🌐 " .. t.language
+    NX.thStroke.Transparency = NX.lang == "th" and 0 or 1
+    NX.enStroke.Transparency = NX.lang == "en" and 0 or 1
+    local cat = NX.categories[NX.currentTab]
+    NX.pageTitle.Text = cat.emoji .. " " .. t[cat.key]
+end
+
+local function selectTab(i)
+    NX.currentTab = i
+    for j, b in ipairs(tabButtons) do
+        b:FindFirstChildOfClass("UIStroke").Transparency = (j == i) and 0 or 1
+    end
+    for key, page in pairs(NX.pages) do
+        page.Visible = (key == NX.categories[i].key)
+    end
+    applyLanguage()
+end
+
+for i in ipairs(NX.categories) do
+    local b = cuteButton({
+        Name = "Tab_" .. i, LayoutOrder = i, Size = UDim2.new(1, 0, 0, 38),
+        Text = "", TextSize = 12, TextWrapped = true,
+    }, NX.tabScroll)
+    round(b, 10)
+    stroke(b, WHITE, 2).Transparency = 1
+    tabButtons[i] = b
+    b.Activated:Connect(function() selectTab(i) end)
+end
+
+NX.thButton.Activated:Connect(function() NX.lang = "th"; applyLanguage() end)
+NX.enButton.Activated:Connect(function() NX.lang = "en"; applyLanguage() end)
+
+selectTab(1)
+
+print("NEXORA / Build A Boat (12/12) loaded")
+
+end)
+
+if not NX_OK12 then
+    warn("NEXORA P12 ERROR: " .. tostring(NX_ERR12))
+end
